@@ -19,6 +19,7 @@ class Source(StrEnum):
 	AI_ASSISTED = "ai_assisted"
 
 
+# Shallow freeze: evidence stays mutable to keep construction and serialization simple.
 @dataclass(frozen=True)
 class Finding:
 	"""A candidate issue for a human reviewer. Never a correction."""
@@ -36,7 +37,7 @@ class Finding:
 
 	def __post_init__(self) -> None:
 		if not (math.isfinite(self.confidence) and 0.0 <= self.confidence <= 1.0):
-				raise ValueError(f"confidence must be in [0, 1], got {self.confidence!r}")
+			raise ValueError(f"confidence must be in [0, 1], got {self.confidence!r}")
 		# Fail fast on typos: these raise ValueError for unknown values.
 		Severity(self.severity)
 		Source(self.source)

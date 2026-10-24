@@ -31,14 +31,14 @@ def review(records: list[Any], suggester: Suggester | None = None) -> list[Findi
 	"""
 	findings: list[Finding] = []
 	for index, row in enumerate(records):
-			shape = rules.check_malformed_row(row, index)
-			if shape:
-					findings.extend(shape)
-					continue
-			for check in CHECKS:
-					findings.extend(check(row, index))
-			if suggester is not None:
-					findings.extend(_ai_findings(suggester, row, index))
+		shape = rules.check_malformed_row(row, index)
+		if shape:
+			findings.extend(shape)
+			continue
+		for check in CHECKS:
+			findings.extend(check(row, index))
+		if suggester is not None:
+			findings.extend(_ai_findings(suggester, row, index))
 	return findings
 
 
@@ -49,7 +49,9 @@ def _ai_findings(suggester: Suggester, row: dict[str, Any], index: int) -> list[
 			raise TypeError(f"expected a list, got {type(raw_items).__name__}")
 		validated = [validate_ai_finding(raw, row, index) for raw in raw_items]
 	except Exception:
-		log.warning("suggester %s failed on row %d; skipping AI suggestions", suggester.name, index, exc_info=True)
+		log.warning(
+			"suggester %s failed on row %d; skipping AI suggestions", suggester.name, index, exc_info=True
+		)
 		return []
 	accepted = []
 	for finding in validated:
