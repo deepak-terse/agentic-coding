@@ -34,7 +34,7 @@ Each check is a plain function `(row: dict, index: int) -> list[Finding]`. Addin
 | Field | Meaning |
 |---|---|
 | `row_index` | Zero-based input position. Always present, so rows with missing or duplicate IDs can still be found. |
-| `item_id` | Original string ID, or `null` if absent or malformed |
+| `item_id` | Original string ID exactly as uploaded (not trimmed), or `null` if absent, blank, or malformed |
 | `issue_type` | Stable machine-readable name, e.g. `missing_part_number` |
 | `severity` | `low` / `medium` / `high`: review priority |
 | `confidence` | 0–1: how strongly the evidence supports the observation. Assigned, not calibrated. |
@@ -42,11 +42,12 @@ Each check is a plain function `(row: dict, index: int) -> list[Finding]`. Addin
 | `suggested_action` | What a reviewer might do, never a claim that something was changed |
 | `source` | `deterministic_rule` / `heuristic` / `ai_assisted` |
 | `evidence` | Original values that triggered the finding |
-| `status` | Always `needs_review` from this tool |
+| `status` | Always `needs_review`. Not a constructor argument, so no check can set it. |
 
 ## Input handling
 
 - The input must be a JSON array. An empty array is valid and produces no findings.
+- JSON is parsed strictly: `NaN`, `Infinity`, and numbers too large for a float are rejected as invalid input, and output is written with `allow_nan=False`, so it is always standard JSON.
 - A non-object row gets one `malformed_row` finding and the remaining rows are still processed.
 - A non-string value in a known field is reported as `malformed_field` and is never converted to text. Other checks treat it as present, so it doesn't trigger a second, misleading finding.
 - Values are trimmed and case-folded only into local variables for comparison. Evidence always shows what was uploaded.
@@ -58,7 +59,8 @@ The AI layer is designed for a real model to replace the stub without changing t
 | Concern | Control |
 |---|---|
 | Data exposure | `build_ai_input` sends only description, manufacturer, part number, and category. |
-| Untrusted output | `validate_ai_finding` checks the issue type against an allowlist, confidence (finite, 0–0.9, not boolean), severity (`low` or `medium` only), and text length. It rejects text that claims a change was made ("fixed", "updated", "now reads", …), matched on word boundaries after removing the record's own values and proposals. The filter is deliberately broad: a false reject only drops a suggestion. |
+| Untrusted output | The model supplies data only: an allowlisted issue type, one proposal (bounded length), and a confidence (0–0.9, not boolean). Each suggestion is validated separately, so one bad item doesn't drop the others. |
+| Wording | Explanation, suggested action, and severity come from templates in `ai.AI_ISSUES`. Model prose is never shown, so it can't claim a change was made. |
 | Evidence integrity | Observed values in evidence are copied from the original row. Only allowlisted proposal keys (e.g. `proposed_description`) are taken from the model. |
 | Identity spoofing | `row_index`, `item_id`, `source`, and `status` are set by the engine. Values the model returns for them are ignored. |
 | Availability | Suggester exceptions, non-list output, and validation errors are caught and logged, and rule and heuristic findings still return. |
@@ -67,7 +69,7 @@ The AI layer is designed for a real model to replace the stub without changing t
 ### Introducing a real model
 
 1. Implement `Suggester.suggest()` against the provider using structured output and a timeout.
-2. Add each new suggestion type to `ALLOWED_AI_ISSUES` only after the check that validates it has been reviewed.
+2. Add each new suggestion type to `AI_ISSUES`, with its proposal key and reviewed template wording.
 3. Record the provider, model, and prompt version in `evidence` for audit.
 4. Track reviewer accept/reject decisions per `issue_type` to calibrate confidence.
 5. Don't expand `AI_INPUT_FIELDS` to supplier, pricing, or customer data without a data-handling review.

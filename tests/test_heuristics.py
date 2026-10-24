@@ -1,6 +1,6 @@
 import pytest
-
 from conftest import ABSENT, with_value
+
 from item_quality import heuristics
 
 

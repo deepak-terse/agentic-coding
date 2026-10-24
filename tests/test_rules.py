@@ -1,6 +1,6 @@
 import pytest
-
 from conftest import ABSENT, MISSING, with_value
+
 from item_quality import rules
 from item_quality.models import Finding
 

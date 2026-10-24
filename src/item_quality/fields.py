@@ -30,6 +30,16 @@ def text(row: dict[str, Any], name: str) -> str | None:
 	return None
 
 
+def identity(row: dict[str, Any], name: str) -> str | None:
+	"""Exact original string for identifiers in output, or None if blank or not a string.
+
+	Unlike text(), nothing is trimmed: " 1001 " stays " 1001 " so downstream matching
+	sees what the source system sent. Use text() for comparisons only.
+	"""
+	value = row.get(name)
+	return value if isinstance(value, str) and value.strip() else None
+
+
 def malformed_fields(row: dict[str, Any]) -> list[str]:
 	"""Recognized fields holding something other than a string or null."""
 	return [

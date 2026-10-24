@@ -27,3 +27,9 @@ indent-width = 2  # display width of a tab, used for line-length checks
 
 [tool.ruff.format]
 indent-style = "tab"
+
+[tool.ruff.lint]
+# Explicit so results don't change with the Ruff version's defaults.
+select = ["E", "F", "W", "I", "B", "UP", "C4", "SIM"]
+# Indentation and line length are owned by the formatter (tabs, see [tool.ruff.format]).
+ignore = ["W191", "E111", "E114", "E117", "E501"]

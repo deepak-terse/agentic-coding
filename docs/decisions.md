@@ -25,7 +25,7 @@ Each check is `(row, index) -> list[Finding]`, listed in `engine.CHECKS`. With o
 - **Opt-in.** Suggestions run only when a suggester is passed (`--ai-stub` today).
 - **Minimal input.** The suggester sees four fields: description, manufacturer, part number, and category.
 - **Engine-owned fields.** `row_index`, `item_id`, `source`, `status`, and the observed values in `evidence` come from the record. Only allowlisted proposal keys come from the model.
-- **Bounded claims.** Confidence is at most 0.9, severity at most `medium`, and text that claims a change was made is rejected.
+- **Data, not prose.** The model supplies an issue type, a proposal, and a confidence (at most 0.9). Explanation, action, and severity come from application templates. An earlier wording filter on model prose was replaced because record values could be used to get change claims past it.
 - **Isolated failures.** If the suggester raises an error or returns malformed output, its suggestions are dropped with a warning and rule findings are unaffected.
 
 **Why.** Model output can be wrong, inconsistent, or shaped by text inside the records (prompt injection). Treating it like untrusted user input keeps the finding contract intact whichever model is plugged in.
@@ -58,6 +58,6 @@ Severity is about the cost of not looking. Confidence is about how directly the 
 | `unsupported_unit_of_measure` | medium | Wrong unit risks quantity errors downstream | 1.0 | Allowlist test |
 | `vague_description` | low | Quality problem, not a blocker | 0.7 | Word lists miss domain terms |
 | `category_mismatch_candidate` | low | Keyword signal only; categories vary by system | 0.7 | Same |
-| `description_suggestion` (AI) | low (max medium) | A proposal, not an observation | ≤ 0.9 | Model output is never certain |
+| `description_suggestion` (AI) | low (template) | A proposal, not an observation | ≤ 0.9 | Model output is never certain |
 
 The vague-description check flags placeholders, all-generic descriptions, and single words. Flagging every short description caught things like "Safety glasses" and buried the real cases. Placeholders stay `low` because the field is technically present; promoting them to `incomplete_row` is a product decision for later.

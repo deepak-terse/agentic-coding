@@ -12,6 +12,7 @@ pip install -e ".[dev]"
 
 pytest                                                  # 165 tests
 ruff format src tests                                   # tabs, 2-column display width
+ruff check src tests                                    # lint (rules pinned in pyproject.toml)
 python -m item_quality samples/items.json               # rules + heuristics
 python -m item_quality samples/items.json --ai-stub     # + simulated AI suggestions
 ```
@@ -56,7 +57,7 @@ The full expected output for the sample is in [`samples/expected_output.json`](s
 | `unsupported_unit_of_measure` | deterministic_rule | medium | 1.0 | Unit not in the supported list |
 | `vague_description` | heuristic | low | 0.7 | A placeholder (`N/A`, `TBD`), only generic terms ("spare part"), or a single word with no digits |
 | `category_mismatch_candidate` | heuristic | low | 0.7 | Description keyword points to a different category |
-| `description_suggestion` | ai_assisted | low | 0.5 | Stub proposes a fuller description (opt-in; AI is capped at medium / 0.9) |
+| `description_suggestion` | ai_assisted | low | 0.5 | Stub proposes a fuller description (opt-in; confidence capped at 0.9, wording from app templates) |
 
 **Confidence** is how strongly the evidence supports the observation, not the probability that a change is needed. These are assigned values, not calibrated scores. **Severity** is review priority. The reasons for each value are in [`docs/decisions.md`](docs/decisions.md#006).
 
@@ -93,7 +94,7 @@ Details are in [`docs/architecture.md`](docs/architecture.md), and the reasoning
 - **Abbreviations and non-English text** (`BRG`, `VLV`, `Kugellager`) aren't recognized, so the heuristics abstain. A synonym table or a real model would help.
 - **Placeholder values** like `N/A` or `TBD` get only a low-severity `vague_description`, not the high-severity `incomplete_row`. The placeholder list is short and English-only.
 - **Hierarchical categories** (`Mechanical > Bearings`) are compared as exact strings, so they produce false category mismatches. Matching on the top-level segment would fix this.
-- **The AI wording filter is conservative.** If a model uses words like "fixed" or "updated" in its own sentence, outside the record values, the suggestion is dropped.
+- **Everything is held in memory.** The CLI loads the whole file and builds all findings before writing output. Fine for typical uploads; very large files would need a streaming review API and incremental JSON output.
 - **The AI stub over-suggests.** It proposes adding the manufacturer even to good descriptions. That's fine for showing the boundary, but a real suggester should target rows that already have a vague description.
 - **Confidence values are not calibrated.** Tracking reviewer accept/reject decisions per `issue_type` would let them be tuned.
 - **No review workflow yet**: no persistence of approve/reject decisions or audit history.

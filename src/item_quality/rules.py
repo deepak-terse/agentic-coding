@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from item_quality.fields import is_blank, malformed_fields, text
+from item_quality.fields import identity, is_blank, malformed_fields, text
 from item_quality.models import Finding, Severity, Source
 
 REQUIRED_FIELDS = ("item_id", "item_description")
@@ -24,7 +24,7 @@ def _rule_finding(
 	return [
 		Finding(
 			row_index=index,
-			item_id=text(row, "item_id") if isinstance(row, dict) else None,
+			item_id=identity(row, "item_id") if isinstance(row, dict) else None,
 			issue_type=issue_type,
 			severity=severity,
 			confidence=1.0,

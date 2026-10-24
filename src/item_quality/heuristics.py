@@ -3,7 +3,7 @@
 import re
 from typing import Any
 
-from item_quality.fields import text
+from item_quality.fields import identity, text
 from item_quality.models import Finding, Severity, Source
 
 HEURISTIC_CONFIDENCE = 0.7
@@ -51,7 +51,7 @@ def _heuristic_finding(
 	return [
 		Finding(
 			row_index=index,
-			item_id=text(row, "item_id"),
+			item_id=identity(row, "item_id"),
 			issue_type=issue_type,
 			severity=Severity.LOW,
 			confidence=HEURISTIC_CONFIDENCE,

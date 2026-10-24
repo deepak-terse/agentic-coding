@@ -71,3 +71,15 @@ def test_output_never_claims_a_correction(complete_row, suggester):
 	text = " ".join(f.explanation + " " + f.suggested_action for f in findings).lower()
 	for banned in ("fixed", "corrected", "auto-approved"):
 		assert banned not in text
+
+
+def test_item_id_is_reported_exactly_as_uploaded_by_every_source():
+	row = {
+		"item_id": " 1001 ",
+		"item_description": "bearing",
+		"manufacturer": "SKF",
+		"category": "Electrical",
+	}
+	findings = review([row], StubSuggester())
+	assert {f.source for f in findings} == {"deterministic_rule", "heuristic", "ai_assisted"}
+	assert {f.item_id for f in findings} == {" 1001 "}

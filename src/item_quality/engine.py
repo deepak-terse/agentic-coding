@@ -47,14 +47,18 @@ def _ai_findings(suggester: Suggester, row: dict[str, Any], index: int) -> list[
 		raw_items = suggester.suggest(build_ai_input(row))
 		if not isinstance(raw_items, list):
 			raise TypeError(f"expected a list, got {type(raw_items).__name__}")
-		validated = [validate_ai_finding(raw, row, index) for raw in raw_items]
 	except Exception:
 		log.warning(
 			"suggester %s failed on row %d; skipping AI suggestions", suggester.name, index, exc_info=True
 		)
 		return []
 	accepted = []
-	for finding in validated:
+	for raw in raw_items:
+		# Validate each suggestion on its own so one bad item can't drop its siblings.
+		try:
+			finding = validate_ai_finding(raw, row, index)
+		except Exception:
+			finding = None
 		if finding is None:
 			log.warning("dropped invalid suggestion from %s on row %d", suggester.name, index)
 		else:

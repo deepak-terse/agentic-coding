@@ -33,9 +33,12 @@ class Finding:
 	suggested_action: str
 	source: Source
 	evidence: dict[str, Any] = field(default_factory=dict)
-	status: str = "needs_review"
+	# Not settable: approval belongs to a human workflow, never to a check.
+	status: str = field(default="needs_review", init=False)
 
 	def __post_init__(self) -> None:
+		if isinstance(self.confidence, bool) or not isinstance(self.confidence, (int, float)):
+			raise ValueError(f"confidence must be a number, got {self.confidence!r}")
 		if not (math.isfinite(self.confidence) and 0.0 <= self.confidence <= 1.0):
 			raise ValueError(f"confidence must be in [0, 1], got {self.confidence!r}")
 		# Fail fast on typos: these raise ValueError for unknown values.

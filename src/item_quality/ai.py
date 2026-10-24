@@ -2,43 +2,52 @@
 
 A Suggester receives a minimal view of one record and returns raw suggestion dicts,
 the way an LLM response would arrive. Raw output is untrusted: it only becomes a
-Finding after validate_ai_finding() accepts it. The engine owns row_index, item_id,
-source, status, and the observed values in evidence, so a model cannot set them.
+Finding after validate_ai_finding() accepts it.
+
+The model contributes data only: an issue type, a proposed value, and a confidence.
+Everything a reviewer reads as a statement (explanation, suggested action, severity)
+comes from application-owned templates, as do row_index, item_id, source, status, and
+the observed values in evidence. A model therefore cannot claim a change was made.
 
 StubSuggester is a deterministic stand-in; it makes no network calls.
 """
 
-import math
 import re
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any, Protocol
 
-from item_quality.fields import text
+from item_quality.fields import identity, text
 from item_quality.models import Finding, Severity, Source
 
 # Only these fields are ever passed to a suggester (data minimization).
 AI_INPUT_FIELDS = ("item_description", "manufacturer", "manufacturer_part_number", "category")
 
-# Issue types a suggester may raise, and the proposal keys each may put in evidence.
-ALLOWED_AI_ISSUES: dict[str, tuple[str, ...]] = {
-	"description_suggestion": ("proposed_description",),
-}
-
-# AI suggestions are never certain and never top priority.
+# AI suggestions are never certain.
 MAX_AI_CONFIDENCE = 0.9
-ALLOWED_AI_SEVERITIES = frozenset({Severity.LOW, Severity.MEDIUM})
 
-MAX_TEXT_LENGTH = 500
+MAX_PROPOSAL_LENGTH = 200
 
-# Words that claim a change was made. Deliberately broad: a false reject only drops
-# a suggestion, while a false accept tells a steward something changed when it didn't.
-# Record values and proposals are removed before matching, so catalog text such as
-# "Fixed flange bearing" in a description is not mistaken for a claim.
-CHANGE_CLAIM = re.compile(
-	r"\b(?:fixed|corrected|updated|changed|replaced|modified|overwritten|applied"
-	r"|approved|auto[- ]?approved|now reads)\b",
-	re.IGNORECASE,
-)
+
+@dataclass(frozen=True)
+class AiIssue:
+	"""What a suggester may propose for one issue type, and how it is presented."""
+
+	proposal_key: str
+	severity: Severity
+	explanation: str  # formatted with {proposal}
+	suggested_action: str
+
+
+# Issue types a suggester may raise. Wording is owned here, never by the model.
+AI_ISSUES: dict[str, AiIssue] = {
+	"description_suggestion": AiIssue(
+		proposal_key="proposed_description",
+		severity=Severity.LOW,
+		explanation="A more specific description could be '{proposal}'.",
+		suggested_action="Review the proposed description; accept, edit, or reject it.",
+	),
+}
 
 
 class Suggester(Protocol):
@@ -52,70 +61,53 @@ def build_ai_input(row: dict[str, Any]) -> dict[str, str | None]:
 	return {name: text(row, name) for name in AI_INPUT_FIELDS}
 
 
-def claims_change(value: str, known_values: tuple[str, ...] = ()) -> bool:
-	"""True if the text claims a change, ignoring exact record values and proposals."""
-	for known in sorted(known_values, key=len, reverse=True):
-		value = re.sub(re.escape(known), " ", value, flags=re.IGNORECASE)
-	return CHANGE_CLAIM.search(value) is not None
+def _valid_confidence(value: Any) -> bool:
+	# Range check before any float conversion: huge ints compare fine but overflow
+	# float(), and NaN fails every comparison.
+	if isinstance(value, bool) or not isinstance(value, (int, float)):
+		return False
+	return 0.0 <= value <= MAX_AI_CONFIDENCE
 
 
-def _bounded_text(value: Any) -> str | None:
-	if not isinstance(value, str) or not value.strip() or len(value) > MAX_TEXT_LENGTH:
+def _proposal(value: Any) -> str | None:
+	if not isinstance(value, str) or not value.strip() or len(value) > MAX_PROPOSAL_LENGTH:
 		return None
-	return value.strip()
-
-
-def _review_text(value: Any, known_values: tuple[str, ...]) -> str | None:
-	cleaned = _bounded_text(value)
-	return None if cleaned is None or claims_change(cleaned, known_values) else cleaned
+	return " ".join(value.split())
 
 
 def validate_ai_finding(raw: Any, row: dict[str, Any], row_index: int) -> Finding | None:
 	"""Turn raw suggester output into a Finding, or return None if it is not acceptable.
 
-	Only allowlisted proposal keys are taken from the model's evidence. Observed values
-	are copied from the original row, so evidence always shows what was uploaded.
+	Only the issue type, the allowlisted proposal, and the confidence are read from the
+	model. Any explanation, action, severity, or identity fields it returns are ignored.
 	"""
 	if not isinstance(raw, dict):
 		return None
-	issue_type, severity = raw.get("issue_type"), raw.get("severity")
-	# Type checks first: unhashable values would make the lookups below raise.
-	if not isinstance(issue_type, str) or issue_type not in ALLOWED_AI_ISSUES:
+	issue_type = raw.get("issue_type")
+	# Type check first: an unhashable value would make the lookup raise.
+	if not isinstance(issue_type, str) or issue_type not in AI_ISSUES:
 		return None
-	if not isinstance(severity, str) or severity not in ALLOWED_AI_SEVERITIES:
-		return None
+	issue = AI_ISSUES[issue_type]
 	confidence = raw.get("confidence")
-	if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
-		return None
-	if not (math.isfinite(confidence) and 0.0 <= confidence <= MAX_AI_CONFIDENCE):
+	if not _valid_confidence(confidence):
 		return None
 	raw_evidence = raw.get("evidence")
 	if not isinstance(raw_evidence, dict):
 		return None
-	proposals = {}
-	for key in ALLOWED_AI_ISSUES[issue_type]:
-		value = _bounded_text(raw_evidence.get(key))
-		if value is None:
-			return None
-		proposals[key] = value
-	observed = {name: row[name] for name in AI_INPUT_FIELDS if name in row}
-	known = tuple(
-		v.strip() for v in [*observed.values(), *proposals.values()] if isinstance(v, str) and v.strip()
-	)
-	explanation = _review_text(raw.get("explanation"), known)
-	action = _review_text(raw.get("suggested_action"), known)
-	if explanation is None or action is None:
+	proposal = _proposal(raw_evidence.get(issue.proposal_key))
+	if proposal is None:
 		return None
+	observed = {name: row[name] for name in AI_INPUT_FIELDS if name in row}
 	return Finding(
 		row_index=row_index,
-		item_id=text(row, "item_id"),
+		item_id=identity(row, "item_id"),
 		issue_type=issue_type,
-		severity=Severity(severity),
+		severity=issue.severity,
 		confidence=float(confidence),
-		explanation=explanation,
-		suggested_action=action,
+		explanation=issue.explanation.format(proposal=proposal),
+		suggested_action=issue.suggested_action,
 		source=Source.AI_ASSISTED,
-		evidence={**observed, **proposals},
+		evidence={**observed, issue.proposal_key: proposal},
 	)
 
 
@@ -136,11 +128,8 @@ class StubSuggester:
 		return [
 			{
 				"issue_type": "description_suggestion",
-				"severity": "low",
 				"confidence": 0.5,
-				"explanation": f"A more specific description could be '{proposed}'.",
-				"suggested_action": "Review the proposed description; accept, edit, or reject it.",
-				"evidence": {"item_description": description, "proposed_description": proposed},
+				"evidence": {"proposed_description": proposed},
 			}
 		]
 

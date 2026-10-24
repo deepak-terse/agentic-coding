@@ -1,18 +1,10 @@
-import math
-
 import pytest
 
-from item_quality.ai import (
-	AI_INPUT_FIELDS,
-	StubSuggester,
-	build_ai_input,
-	claims_change,
-	validate_ai_finding,
-)
+from item_quality.ai import AI_INPUT_FIELDS, StubSuggester, build_ai_input, validate_ai_finding
 from item_quality.engine import review
 
 ROW = {
-	"item_id": "1001",
+	"item_id": " 1001 ",
 	"item_description": "  bearing  ",
 	"manufacturer": "SKF",
 	"source_system": "ERP-A",
@@ -20,10 +12,7 @@ ROW = {
 
 VALID = {
 	"issue_type": "description_suggestion",
-	"severity": "low",
 	"confidence": 0.5,
-	"explanation": "A more specific description could be 'Bearing, SKF'.",
-	"suggested_action": "Review the proposed description.",
 	"evidence": {"proposed_description": "Bearing, SKF"},
 }
 
@@ -35,24 +24,44 @@ def test_valid_output_becomes_ai_assisted_finding():
 	finding = validate_ai_finding(VALID, ROW, 4)
 	assert finding.source == "ai_assisted"
 	assert finding.status == "needs_review"
-	assert (finding.row_index, finding.item_id) == (4, "1001")
+	assert (finding.row_index, finding.item_id) == (4, " 1001 ")  # original, untrimmed
+	assert finding.explanation == "A more specific description could be 'Bearing, SKF'."
+	assert finding.severity == "low"
 
 
-def test_suggester_cannot_set_identity_source_or_status():
+def test_model_cannot_set_wording_severity_identity_or_status():
 	raw = {
 		**VALID,
+		"explanation": "The record was updated.",
+		"suggested_action": "No action needed; auto-approved.",
+		"severity": "high",
 		"row_index": 99,
 		"item_id": "evil",
 		"source": "deterministic_rule",
 		"status": "approved",
 	}
 	finding = validate_ai_finding(raw, ROW, 0)
-	assert (finding.row_index, finding.item_id, finding.source, finding.status) == (
-		0,
-		"1001",
-		"ai_assisted",
-		"needs_review",
-	)
+	assert finding.explanation == "A more specific description could be 'Bearing, SKF'."
+	assert finding.suggested_action == "Review the proposed description; accept, edit, or reject it."
+	assert (finding.severity, finding.row_index, finding.item_id) == ("low", 0, " 1001 ")
+	assert (finding.source, finding.status) == ("ai_assisted", "needs_review")
+
+
+@pytest.mark.parametrize(
+	"proposal, row_description",
+	[("updated", "bearing"), ("Bearing, SKF", "fixed")],
+)
+def test_change_claim_bypass_is_closed(proposal, row_description):
+	# Regression: a proposal or record value equal to a change word used to whitelist
+	# that word in model prose ("The record was updated."). Prose is no longer read.
+	raw = {
+		**VALID,
+		"evidence": {"proposed_description": proposal},
+		"explanation": "The record was updated.",
+	}
+	finding = validate_ai_finding(raw, {**ROW, "item_description": row_description}, 0)
+	assert "was updated" not in finding.explanation
+	assert finding.explanation == f"A more specific description could be '{proposal}'."
 
 
 def test_observed_evidence_comes_from_original_row_not_model():
@@ -60,7 +69,7 @@ def test_observed_evidence_comes_from_original_row_not_model():
 		**VALID,
 		"evidence": {
 			"item_description": "fabricated",
-			"proposed_description": "Bearing, SKF",
+			"proposed_description": "  Bearing,   SKF ",
 			"blob": "x" * 10_000,
 		},
 	}
@@ -68,7 +77,7 @@ def test_observed_evidence_comes_from_original_row_not_model():
 	assert finding.evidence == {
 		"item_description": "  bearing  ",  # original, untrimmed
 		"manufacturer": "SKF",
-		"proposed_description": "Bearing, SKF",
+		"proposed_description": "Bearing, SKF",  # whitespace collapsed
 	}
 
 
@@ -76,21 +85,20 @@ def test_observed_evidence_comes_from_original_row_not_model():
 	"overrides",
 	[
 		{"issue_type": "delete_record"},
+		{"issue_type": ["description_suggestion"]},
 		{"confidence": 1.0},  # only deterministic rules are certain
 		{"confidence": 1.5},
-		{"confidence": math.nan},
+		{"confidence": -0.1},
+		{"confidence": float("nan")},
+		{"confidence": float("inf")},
+		{"confidence": 10**400},  # would overflow float()
 		{"confidence": "0.9"},
 		{"confidence": True},
-		{"severity": "high"},  # AI never claims top priority
-		{"severity": "critical"},
-		{"explanation": ""},
-		{"explanation": "x" * 501},
-		{"suggested_action": "Record was corrected automatically."},
-		{"explanation": "Description was updated to 'Bearing, SKF'."},
-		{"explanation": "The record has been changed."},
 		{"evidence": "not a dict"},
 		{"evidence": {}},  # proposal missing
 		{"evidence": {"proposed_description": "   "}},
+		{"evidence": {"proposed_description": "x" * 201}},
+		{"evidence": {"proposed_description": 42}},
 	],
 )
 def test_invalid_output_is_rejected(overrides):
@@ -100,42 +108,6 @@ def test_invalid_output_is_rejected(overrides):
 @pytest.mark.parametrize("raw", [None, "text", [VALID]])
 def test_non_dict_output_is_rejected(raw):
 	assert validate_ai_finding(raw, ROW, 0) is None
-
-
-@pytest.mark.parametrize(
-	"value",
-	[
-		"Fixed.",
-		"Auto approved",
-		"Values were replaced.",
-		"I updated the description.",
-		"Description replaced with X.",
-		"The description now reads X.",
-		"Status: approved.",
-		"The item's description was updated; it's done.",  # apostrophes are not quotes
-		"'Record has been corrected'",  # quoting a claim doesn't hide it
-	],
-)
-def test_change_claims_are_detected(value):
-	assert claims_change(value)
-
-
-@pytest.mark.parametrize(
-	"value",
-	[
-		"Prefixed codes and affixed labels need review.",
-		"Review whether the category should change.",
-		"Review before approval.",
-	],
-)
-def test_review_wording_is_not_a_change_claim(value):
-	assert not claims_change(value)
-
-
-def test_record_values_are_ignored_when_checking_claims():
-	value = "Could be 'Fixed flange bearing FB-20, SKF'."
-	assert claims_change(value)
-	assert not claims_change(value, ("Fixed flange bearing FB-20", "Fixed flange bearing FB-20, SKF"))
 
 
 # --- data minimization ---------------------------------------------------
@@ -200,13 +172,26 @@ class UnhashableOutputSuggester:
 	name = "unhashable"
 
 	def suggest(self, record):
-		return [{**VALID, "issue_type": ["x"]}, {**VALID, "severity": {}}]
+		return [{**VALID, "issue_type": ["x"]}, {**VALID, "issue_type": {}}]
 
 
 @pytest.mark.parametrize("suggester", [UnhashableOutputSuggester()])
 def test_malformed_suggester_output_never_breaks_the_run(suggester):
 	rows = [{"item_id": "1", "item_description": "bearing", "manufacturer": "SKF"}]
 	assert review(rows, suggester) == review(rows)
+
+
+class OverflowSiblingSuggester:
+	name = "overflow"
+
+	def suggest(self, record):
+		return [{**VALID, "confidence": 10**400}, {**VALID}]
+
+
+def test_one_bad_suggestion_does_not_drop_valid_siblings(caplog):
+	findings = review([{"item_id": "1", "item_description": "SKF 6205"}], OverflowSiblingSuggester())
+	assert [f.source for f in findings] == ["ai_assisted"]
+	assert "dropped invalid suggestion" in caplog.text
 
 
 class BadOutputSuggester:

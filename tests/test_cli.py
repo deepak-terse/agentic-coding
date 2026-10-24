@@ -2,6 +2,8 @@ import json
 import subprocess
 import sys
 
+import pytest
+
 
 def run_cli(*args):
 	return subprocess.run(
@@ -64,3 +66,18 @@ def test_missing_file(tmp_path):
 	result = run_cli(tmp_path / "nope.json")
 	assert result.returncode == 2
 	assert "cannot read" in result.stderr
+
+
+@pytest.mark.parametrize("number", ["NaN", "Infinity", "-Infinity", "1e400", "-1e400"])
+def test_non_finite_numbers_are_rejected(tmp_path, number):
+	result = run_cli(write(tmp_path, f'[{{"item_id": "1", "category": {number}}}]'))
+	assert result.returncode == 2
+	assert "not valid JSON" in result.stderr
+	assert result.stdout == ""
+
+
+def test_output_is_strict_json(tmp_path):
+	path = write(tmp_path, '[{"item_id": "1", "category": 1e300, "unit_of_measure": -0.0}]')
+	result = run_cli(path)
+	assert result.returncode == 0, result.stderr
+	json.loads(result.stdout, parse_constant=lambda name: pytest.fail(f"emitted {name}"))

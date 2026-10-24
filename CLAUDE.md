@@ -8,6 +8,7 @@ Item Quality Assistant: a Python CLI that reads item master records (JSON) and o
 pip install -e ".[dev]"                                  # install into .venv
 .venv/bin/pytest -q                                      # run all tests
 .venv/bin/ruff format src tests                          # format (tabs, width 2)
+.venv/bin/ruff check src tests                           # lint
 python -m item_quality samples/items.json [--ai-stub]    # run on sample input
 ```
 
