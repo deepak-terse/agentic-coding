@@ -26,6 +26,7 @@ Add tests to `tests/test_rules.py` or `tests/test_heuristics.py`:
 ## 3. Implement
 
 - Add the function to `rules.py` or `heuristics.py` with the signature `(row: dict[str, Any], index: int) -> list[Finding]`.
+- Return findings through the module helper, `_rule_finding` or `_heuristic_finding`, which fixes the source and confidence. Don't construct `Finding` directly in a check.
 - Use `fields.text` / `fields.is_blank`, and build `evidence` from original values.
 - Add it to `engine.CHECKS` at the position where its findings should appear within a row.
 

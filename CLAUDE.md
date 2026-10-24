@@ -7,6 +7,7 @@ Item Quality Assistant: a Python CLI that reads item master records (JSON) and o
 ```bash
 pip install -e ".[dev]"                                  # install into .venv
 .venv/bin/pytest -q                                      # run all tests
+.venv/bin/ruff format src tests                          # format (tabs, width 2)
 python -m item_quality samples/items.json [--ai-stub]    # run on sample input
 ```
 
@@ -24,9 +25,10 @@ python -m item_quality samples/items.json [--ai-stub]    # run on sample input
 - Use the `Finding` contract in `src/item_quality/models.py` for every check.
 - Run `.venv/bin/pytest -q` before reporting work as done, and report failures as they are.
 - Python 3.11+, standard library only at runtime. Keep functions small, with no frameworks.
+- Indent with tabs (2 columns wide). Python files are formatted automatically after every edit by a hook in `.claude/settings.json`, so don't hand-format.
 
 ## Ask first
 
-- Expanding scope beyond `docs/decisions.md` #006 (duplicates, CSV, real LLM, persistence, UI)
+- Expanding scope beyond `docs/decisions.md` #005 (duplicates, CSV, real LLM, persistence, UI)
 - Changing severity or confidence values, or what the AI layer can see
 - Regenerating `samples/expected_output.json` for anything other than an intended behavior change

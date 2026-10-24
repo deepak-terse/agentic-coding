@@ -11,6 +11,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
 pytest                                                  # 165 tests
+ruff format src tests                                   # tabs, 2-column display width
 python -m item_quality samples/items.json               # rules + heuristics
 python -m item_quality samples/items.json --ai-stub     # + simulated AI suggestions
 ```
@@ -57,7 +58,7 @@ The full expected output for the sample is in [`samples/expected_output.json`](s
 | `category_mismatch_candidate` | heuristic | low | 0.7 | Description keyword points to a different category |
 | `description_suggestion` | ai_assisted | low | 0.5 | Stub proposes a fuller description (opt-in; AI is capped at medium / 0.9) |
 
-**Confidence** is how strongly the evidence supports the observation, not the probability that a change is needed. These are assigned values, not calibrated scores. **Severity** is review priority. The reasons for each value are in [`docs/decisions.md`](docs/decisions.md#007).
+**Confidence** is how strongly the evidence supports the observation, not the probability that a change is needed. These are assigned values, not calibrated scores. **Severity** is review priority. The reasons for each value are in [`docs/decisions.md`](docs/decisions.md#006).
 
 ## Design
 
@@ -105,6 +106,7 @@ The repo includes a small Claude Code setup, so contributors working with an AI 
 
 ```
 CLAUDE.md                          entry point: commands, where things are, what needs approval
+.claude/settings.json              hook: runs ruff format on every Python file the agent edits
 .claude/rules/                     path-scoped rules, loaded only for matching files
   review-safety.md                 src/**     no mutation, honest source labels, review wording
   ai-boundary.md                   ai.py, engine.py   data minimization, output validation
