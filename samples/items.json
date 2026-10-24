@@ -1,0 +1,11 @@
+[
+  {"item_id": "1001", "item_description": "bearing", "manufacturer": "SKF", "manufacturer_part_number": "", "category": "Mechanical", "unit_of_measure": "EA", "source_system": "ERP-A"},
+  {"item_id": "1002", "item_description": "SKF Bearing 6205 ZZ", "manufacturer": "SKF", "manufacturer_part_number": "6205-ZZ", "category": "Electrical", "unit_of_measure": "EA", "source_system": "ERP-B"},
+  {"item_id": "1003", "item_description": "Emerson gate valve GV-200B 2in brass", "manufacturer": "Emerson", "manufacturer_part_number": "GV-200B", "category": "Mechanical", "unit_of_measure": "EA", "source_system": "ERP-A"},
+  {"item_id": "1004", "item_description": "   ", "manufacturer": null, "manufacturer_part_number": null, "category": "Electrical", "unit_of_measure": "EACH", "source_system": "ERP-B"},
+  {"item_id": 1005, "item_description": "Copper cable 2.5mm 100m", "manufacturer": "Nexans", "manufacturer_part_number": "NX-2.5-100", "category": "Electrical", "unit_of_measure": "M", "source_system": "ERP-A"},
+  {"item_id": null, "item_description": "relay", "manufacturer": "Omron", "manufacturer_part_number": "G2R-1-E", "category": "Electrical", "unit_of_measure": "EA", "source_system": "ERP-B"},
+  {"item_id": "1002", "item_description": "SKF bearing 6205-ZZ", "manufacturer": "SKF", "manufacturer_part_number": "6205ZZ", "category": "Mechanical", "unit_of_measure": "ea", "source_system": "ERP-A"},
+  "N/A",
+  {"item_id": "1008", "item_description": "Nitrile gloves size L, box of 100", "manufacturer": "Ansell", "manufacturer_part_number": "", "category": "Safety", "unit_of_measure": "BOX", "source_system": "ERP-B"}
+]

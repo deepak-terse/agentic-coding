@@ -1,0 +1,233 @@
+[
+  {
+    "row_index": 0,
+    "item_id": "1001",
+    "issue_type": "missing_part_number",
+    "severity": "medium",
+    "confidence": 1.0,
+    "explanation": "Manufacturer 'SKF' is present but manufacturer part number is blank.",
+    "suggested_action": "Request the manufacturer part number from the source owner.",
+    "source": "deterministic_rule",
+    "evidence": {
+      "manufacturer": "SKF",
+      "manufacturer_part_number": ""
+    },
+    "status": "needs_review"
+  },
+  {
+    "row_index": 0,
+    "item_id": "1001",
+    "issue_type": "vague_description",
+    "severity": "low",
+    "confidence": 0.7,
+    "explanation": "Description 'bearing' contains only generic terms ('bearing').",
+    "suggested_action": "Review the description and consider adding type, size, or part details.",
+    "source": "heuristic",
+    "evidence": {
+      "item_description": "bearing",
+      "word_count": 1
+    },
+    "status": "needs_review"
+  },
+  {
+    "row_index": 0,
+    "item_id": "1001",
+    "issue_type": "description_suggestion",
+    "severity": "low",
+    "confidence": 0.5,
+    "explanation": "A more specific description could be 'Bearing, SKF'.",
+    "suggested_action": "Review the proposed description; accept, edit, or reject it.",
+    "source": "ai_assisted",
+    "evidence": {
+      "item_description": "bearing",
+      "manufacturer": "SKF",
+      "manufacturer_part_number": "",
+      "category": "Mechanical",
+      "proposed_description": "Bearing, SKF"
+    },
+    "status": "needs_review"
+  },
+  {
+    "row_index": 1,
+    "item_id": "1002",
+    "issue_type": "category_mismatch_candidate",
+    "severity": "low",
+    "confidence": 0.7,
+    "explanation": "Description mentions 'bearing', which usually belongs to Mechanical, but category is 'Electrical'.",
+    "suggested_action": "Review the category assignment before approval.",
+    "source": "heuristic",
+    "evidence": {
+      "item_description": "SKF Bearing 6205 ZZ",
+      "category": "Electrical",
+      "matched_keywords": [
+        "bearing"
+      ],
+      "candidate_category": "Mechanical"
+    },
+    "status": "needs_review"
+  },
+  {
+    "row_index": 3,
+    "item_id": "1004",
+    "issue_type": "incomplete_row",
+    "severity": "high",
+    "confidence": 1.0,
+    "explanation": "Required field(s) missing or blank: item_description (whitespace only).",
+    "suggested_action": "Request the missing values from the source owner.",
+    "source": "deterministic_rule",
+    "evidence": {
+      "missing_fields": [
+        "item_description"
+      ],
+      "observed": {
+        "item_description": "   "
+      }
+    },
+    "status": "needs_review"
+  },
+  {
+    "row_index": 3,
+    "item_id": "1004",
+    "issue_type": "unsupported_unit_of_measure",
+    "severity": "medium",
+    "confidence": 1.0,
+    "explanation": "Unit of measure 'EACH' is not in the supported list.",
+    "suggested_action": "Confirm the intended unit with the source owner before approval.",
+    "source": "deterministic_rule",
+    "evidence": {
+      "unit_of_measure": "EACH"
+    },
+    "status": "needs_review"
+  },
+  {
+    "row_index": 4,
+    "item_id": null,
+    "issue_type": "malformed_field",
+    "severity": "medium",
+    "confidence": 1.0,
+    "explanation": "Expected text values but found: item_id (int).",
+    "suggested_action": "Review the source mapping for these fields before approval.",
+    "source": "deterministic_rule",
+    "evidence": {
+      "item_id": 1005
+    },
+    "status": "needs_review"
+  },
+  {
+    "row_index": 4,
+    "item_id": null,
+    "issue_type": "description_suggestion",
+    "severity": "low",
+    "confidence": 0.5,
+    "explanation": "A more specific description could be 'Copper cable 2.5mm 100m, Nexans, NX-2.5-100'.",
+    "suggested_action": "Review the proposed description; accept, edit, or reject it.",
+    "source": "ai_assisted",
+    "evidence": {
+      "item_description": "Copper cable 2.5mm 100m",
+      "manufacturer": "Nexans",
+      "manufacturer_part_number": "NX-2.5-100",
+      "category": "Electrical",
+      "proposed_description": "Copper cable 2.5mm 100m, Nexans, NX-2.5-100"
+    },
+    "status": "needs_review"
+  },
+  {
+    "row_index": 5,
+    "item_id": null,
+    "issue_type": "incomplete_row",
+    "severity": "high",
+    "confidence": 1.0,
+    "explanation": "Required field(s) missing or blank: item_id (null).",
+    "suggested_action": "Request the missing values from the source owner.",
+    "source": "deterministic_rule",
+    "evidence": {
+      "missing_fields": [
+        "item_id"
+      ],
+      "observed": {
+        "item_id": null
+      }
+    },
+    "status": "needs_review"
+  },
+  {
+    "row_index": 5,
+    "item_id": null,
+    "issue_type": "vague_description",
+    "severity": "low",
+    "confidence": 0.7,
+    "explanation": "Description 'relay' is a single word with no size, model, or specification detail.",
+    "suggested_action": "Review the description and consider adding type, size, or part details.",
+    "source": "heuristic",
+    "evidence": {
+      "item_description": "relay",
+      "word_count": 1
+    },
+    "status": "needs_review"
+  },
+  {
+    "row_index": 5,
+    "item_id": null,
+    "issue_type": "description_suggestion",
+    "severity": "low",
+    "confidence": 0.5,
+    "explanation": "A more specific description could be 'Relay, Omron, G2R-1-E'.",
+    "suggested_action": "Review the proposed description; accept, edit, or reject it.",
+    "source": "ai_assisted",
+    "evidence": {
+      "item_description": "relay",
+      "manufacturer": "Omron",
+      "manufacturer_part_number": "G2R-1-E",
+      "category": "Electrical",
+      "proposed_description": "Relay, Omron, G2R-1-E"
+    },
+    "status": "needs_review"
+  },
+  {
+    "row_index": 7,
+    "item_id": null,
+    "issue_type": "malformed_row",
+    "severity": "high",
+    "confidence": 1.0,
+    "explanation": "Row is a str, not a record object.",
+    "suggested_action": "Check the export from the source system; this row was not evaluated.",
+    "source": "deterministic_rule",
+    "evidence": {
+      "row": "N/A"
+    },
+    "status": "needs_review"
+  },
+  {
+    "row_index": 8,
+    "item_id": "1008",
+    "issue_type": "missing_part_number",
+    "severity": "medium",
+    "confidence": 1.0,
+    "explanation": "Manufacturer 'Ansell' is present but manufacturer part number is blank.",
+    "suggested_action": "Request the manufacturer part number from the source owner.",
+    "source": "deterministic_rule",
+    "evidence": {
+      "manufacturer": "Ansell",
+      "manufacturer_part_number": ""
+    },
+    "status": "needs_review"
+  },
+  {
+    "row_index": 8,
+    "item_id": "1008",
+    "issue_type": "description_suggestion",
+    "severity": "low",
+    "confidence": 0.5,
+    "explanation": "A more specific description could be 'Nitrile gloves size L, box of 100, Ansell'.",
+    "suggested_action": "Review the proposed description; accept, edit, or reject it.",
+    "source": "ai_assisted",
+    "evidence": {
+      "item_description": "Nitrile gloves size L, box of 100",
+      "manufacturer": "Ansell",
+      "manufacturer_part_number": "",
+      "category": "Safety",
+      "proposed_description": "Nitrile gloves size L, box of 100, Ansell"
+    },
+    "status": "needs_review"
+  }
+]
